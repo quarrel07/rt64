@@ -258,7 +258,7 @@ namespace RT64 {
             return;
         }
 
-        refreshRate = displayMode.dmDisplayFrequency;
+        refreshRate = displayMode.dmDisplayFlags & DM_INTERLACED ? displayMode.dmDisplayFrequency * 2 : displayMode.dmDisplayFrequency;
 
         // FIXME: This function truncates refresh rates that'd otherwise round to the correct rate in most cases.
         // This hack will fix most common cases where refresh rates divisble by 10 are truncated to the wrong value.
