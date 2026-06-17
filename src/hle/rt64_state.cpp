@@ -384,6 +384,11 @@ namespace RT64 {
                     else {
                         dstCallTile.tileCopyUsed = false;
                         dstCallTile.tmemHashOrID = rdp->tileReplacementHashes[tileIndex];
+
+                        if (checkResult.syncRequired) {
+                            FramebufferPair &fbPair = workload.fbPairs[workload.currentFramebufferPairIndex()];
+                            fbPair.syncRequired = true;
+                        }
                     }
 
                     if (nativeSamplerSupported) {
@@ -595,6 +600,10 @@ namespace RT64 {
                 depthFb->lastWriteFmt = G_IM_FMT_DEPTH;
                 depthFb->lastWriteTimestamp = writeTimestamp;
                 framebufferManager.changeRAM(depthFb, depthFb->addressStart, depthFb->addressStart + depthFbBytes);
+            }
+
+            if (fbPair.syncRequired) {
+                framebufferManager.synchronizeRegionsTMEM();
             }
         }
 

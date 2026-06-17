@@ -629,6 +629,7 @@ namespace RT64 {
         auto it = activeRegionsTMEM.begin();
         while (it != activeRegionsTMEM.end()) {
             it->syncRequired = false;
+            it++;
         }
     }
 
