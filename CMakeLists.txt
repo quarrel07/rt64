@@ -48,10 +48,14 @@ elseif (APPLE)
         find_library(ZLIB_LIBRARY NAMES z)
         get_filename_component(ZLIB_PATH ${ZLIB_LIBRARY} DIRECTORY)
 
-        set (DXC "DYLD_LIBRARY_PATH=${PROJECT_SOURCE_DIR}/src/contrib/dxc/lib/x64:${ZLIB_PATH}" "${PROJECT_SOURCE_DIR}/src/contrib/dxc/bin/x64/dxc-macos")
+        # Invoked via `cmake -E env` (not a bare "VAR=value" prefix) so this keeps working when the
+        # source tree is under a path containing spaces: /bin/sh only recognizes an unquoted NAME=value
+        # word as an environment assignment, and CMake must fully quote this token once it contains a
+        # space, which makes /bin/sh try to execute the literal string instead.
+        set (DXC ${CMAKE_COMMAND} -E env "DYLD_LIBRARY_PATH=${PROJECT_SOURCE_DIR}/src/contrib/dxc/lib/x64:${ZLIB_PATH}" -- "${PROJECT_SOURCE_DIR}/src/contrib/dxc/bin/x64/dxc-macos")
         set (SPIRVCROSS "DYLD_LIBRARY_PATH=${PROJECT_SOURCE_DIR}/src/contrib/spirv-cross/lib/x64:$ENV{DYLD_LIBRARY_PATH}" "${PROJECT_SOURCE_DIR}/src/contrib/spirv-cross/bin/x64/spirv-cross")
     else()
-        set (DXC "DYLD_LIBRARY_PATH=${PROJECT_SOURCE_DIR}/src/contrib/dxc/lib/arm64:${ZLIB_PATH}" "${PROJECT_SOURCE_DIR}/src/contrib/dxc/bin/arm64/dxc-macos")
+        set (DXC ${CMAKE_COMMAND} -E env "DYLD_LIBRARY_PATH=${PROJECT_SOURCE_DIR}/src/contrib/dxc/lib/arm64:${ZLIB_PATH}" -- "${PROJECT_SOURCE_DIR}/src/contrib/dxc/bin/arm64/dxc-macos")
         set (SPIRVCROSS "DYLD_LIBRARY_PATH=${PROJECT_SOURCE_DIR}/src/contrib/spirv-cross/lib/arm64:$ENV{DYLD_LIBRARY_PATH}" "${PROJECT_SOURCE_DIR}/src/contrib/spirv-cross/bin/arm64/spirv-cross")
     endif()
 else()
@@ -94,6 +98,15 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 20.0)
         add_compile_options(-Wno-deprecated-literal-operator -Wno-nontrivial-memcall)
     endif()
+endif()
+
+if (APPLE)
+    # contrib/hlslpp's scalar.h calls labs() without including <cstdlib>; it previously reached the
+    # declaration transitively through another header, but that stopped being reliable on newer
+    # SDKs/libc++. Force-include rather than patch the vendored header directly. (Not nested in the
+    # "Clang" check above: AppleClang's CMAKE_CXX_COMPILER_ID is "AppleClang", not "Clang", so that
+    # whole block never applies when building with Xcode's default toolchain.)
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-include> $<$<COMPILE_LANGUAGE:CXX>:cstdlib>)
 endif()
 
 set(ANDROID_PLATFORM android-24)
